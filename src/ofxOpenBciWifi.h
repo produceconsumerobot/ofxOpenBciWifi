@@ -83,6 +83,7 @@ public:
 	int getFftBinFromFrequency(float freq);
 	bool isFftNew(string ipAddress);
 
+	// ** Planned functions **
 	//void enableHPFilter(float freq);
 	//void disableHPFilter();
 	//void enableLPFilter(float freq);

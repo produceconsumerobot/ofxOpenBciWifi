@@ -39,7 +39,7 @@ void ofApp::setup(){
 	ofRectangle scopeArea;
 	scopeArea = ofRectangle(ofPoint(0, yTop), ofPoint(winSize.x / 2 * 3 / 4 - xGap, winSize.y));
 	scopeWins.at(0) = ofxMultiScope(nChan, scopeArea, legendFont, 40); // Setup the multiScope panel
-	scopeArea = ofRectangle(ofPoint(winSize.x / 2 + xGap, yTop), ofPoint(winSize.x / 2 + winSize.x / 2 * 3 / 4 + xGap, winSize.y));
+	scopeArea = ofRectangle(ofPoint(winSize.x / 2 + xGap, yTop), ofPoint(winSize.x / 2 + winSize.x / 2 * 3 / 4, winSize.y));
 	scopeWins.at(1) = ofxMultiScope(nChan, scopeArea, legendFont, 40); // Setup the multiScope panel
 	for (int h = 0; h < nHeadsets; h++)
 	{
@@ -54,13 +54,13 @@ void ofApp::setup(){
 	scopeFftWins.resize(nHeadsets);
 	scopeArea = ofRectangle(ofPoint(winSize.x / 2 * 3 / 4 - xGap, yTop), ofPoint(winSize.x / 2 - xGap, winSize.y));
 	scopeFftWins.at(0) = ofxMultiScope(nChan, scopeArea, legendFont, -1); // Setup the multiScope panel
-	scopeArea = ofRectangle(ofPoint(winSize.x / 2 + winSize.x / 2 * 3 / 4 + xGap, yTop), ofPoint(winSize.x, winSize.y));
+	scopeArea = ofRectangle(ofPoint(winSize.x / 2 + winSize.x / 2 * 3 / 4, yTop), ofPoint(winSize.x, winSize.y));
 	scopeFftWins.at(1) = ofxMultiScope(nChan, scopeArea, legendFont, -1); // Setup the multiScope panel
 	for (int h = 0; h < nHeadsets; h++)
 	{
 		for (int ch = 0; ch < oscColors.size(); ch++)
 		{
-			scopeFftWins.at(h).scopes.at(ch).setup(nFftBins, 1, oscNames.at(ch), oscColors.at(ch), 40, -1200); // Setup each oscilloscope panel
+			scopeFftWins.at(h).scopes.at(ch).setup(1, nFftBins, oscNames.at(ch), oscColors.at(ch), 40, -1200); // Setup each oscilloscope panel
 		}
 	}
 
@@ -98,16 +98,12 @@ void ofApp::update(){
 
 		for (int ch = 0; ch < tempData.size() && ch < nChan; ch++)
 		{
-			//vector<vector<float>> temp;
-			//temp.push_back(tempData.at(ch));
 			if (!isPaused)
 			{
 				scopeWins.at(h).scopes.at(ch).updateData(tempData.at(ch));
 
 				if (openBci.isFftNew(ipAddresses.at(h)))
 				{
-					//vector<vector<float>> tempFft;
-					//tempFft.push_back(tempFftData.at(ch));
 					tempFftData.at(ch).resize(nFftBins);
 					scopeFftWins.at(h).scopes.at(ch).updateData(tempFftData.at(ch));
 				}
@@ -124,19 +120,6 @@ void ofApp::draw(){
 	ofDrawBitmapString("Frame Rate (Hz): " + ofToString(ofGetFrameRate()) + 
 		"\nFFT Buffer Fill Rates (Hz): " + ofToString(1000.f / fftDelay.at(0)) + ", " + ofToString(1000.f / fftDelay.at(1)), ofGetWindowSize().x / 2, 20);
 	
-	//vector<string> stringData = openBci.getStringData();
-	//for (int i = 0; i < stringData.size(); i++)
-	//{
-	//	ofDrawBitmapString();
-	//}
-
-
-	// ofxOpenBciWifi Example
-	// Listening on Port: 3000
-	// Frame Rate
-	// FFT Rate
-	// stringData
-
 	int yDraw = yTop - 7;
 	vector<string> ipAddresses = openBci.getHeadsetIpAddresses();
 	string ipString = "";
