@@ -18,3 +18,4 @@ OpenFrameworks addon for interfacing with OpenBCI via the WiFi shield
 - Close the OpenBCI_GUI software and start the openBciWifi-example
 - Use Postman to send an HTTP post to the OpenBCI WiFi shield to establish a TCP connection
 - Use postman to send an HTTP get to the OpenBCI WiFi shield to start streaming data
+-- See API for full documentation https://app.swaggerhub.com/apis/pushtheworld/openbci-wifi-server/1.3.0
