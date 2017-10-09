@@ -5,7 +5,7 @@ OpenFrameworks addon for interfacing with OpenBCI via the WiFi shield
 - Developed to works with any number of OpenBCI boards
 
 #### ofxOpenBciWifi-example screenshot with 1 connected cyton board
-![ofxOpenBciWifi Blinks Screenshot](screenshots/OpenBCI_22.png "ofxOpenBciWifi Blinks Screenshot")
+![ofxOpenBciWifi Blinks Screenshot](screenshots/OpenBCI_27.png "ofxOpenBciWifi Blinks Screenshot")
 
 ## Requirements:
 ### ofxAddons for ofxOpenBciWifi:
