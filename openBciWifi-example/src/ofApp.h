@@ -41,4 +41,7 @@ class ofApp : public ofBaseApp{
 
 		bool isPaused;
 		int selectedScope;
+
+		bool debugLoggingEnabled;
+		LoggerThread debugLogger;
 };

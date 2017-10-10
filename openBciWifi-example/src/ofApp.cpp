@@ -73,6 +73,12 @@ void ofApp::setup(){
 
 	isPaused = false;
 	selectedScope = 0;
+
+	// Debug Logger
+	debugLogger.setDirPath("");
+	debugLogger.setFilename(ofToDataPath(ofGetTimestampString("%Y-%m-%d-%H-%M-%S") + ".debug_log"));
+	debugLoggingEnabled = false;
+	debugLogger.startThread();
 }
 
 //--------------------------------------------------------------
@@ -86,6 +92,11 @@ void ofApp::update(){
 	vector<string> ipAddresses = openBci.getHeadsetIpAddresses();
 	for (int h = 0; h < ipAddresses.size() && h < nHeadsets; h++)
 	{
+		if (debugLoggingEnabled)
+		{
+			debugLogger.push(stringData.at(h) + "\n");
+		}
+
 		vector<vector<float>> tempData = openBci.getData(ipAddresses.at(h));
 		vector<vector<float>> tempFftData;
 		if (openBci.isFftNew(ipAddresses.at(h)))
@@ -154,7 +165,6 @@ void ofApp::keyReleased(int key){
 	{
 		isPaused = !isPaused;
 	}
-
 
 	// Increment the yScale
 	if (key == '+') {

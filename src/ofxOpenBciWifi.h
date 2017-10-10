@@ -23,7 +23,6 @@ private:
 	int _Fs;
 	int _tcpPort;
 	int _nHeadsets;
-	string _logFileName;
 	string _messageDelimiter;						
 	vector<string> _ipAddresses;
 	vector<string> _stringData;
@@ -54,7 +53,7 @@ private:
 	vector<vector<ofxBiquadFilter1f>> _filterLP;
 
 	bool _fftSmoothingEnabled;
-	int _fftSmoothingNwin;
+	//int _fftSmoothingNwin;
 	float _fftSmoothingNewDataWeight;
 
 	bool _loggingEnabled;
@@ -66,6 +65,8 @@ private:
 
 	void addHeadset(string ipAddress);
 	void clearDataVectors();
+
+	vector<vector<int>> sample_numbers;
 
 public:
 	ofxOpenBciWifi(int samplingFreq = 250);
@@ -93,5 +94,5 @@ public:
 	//void enableFftSmoothing(float newDataWeight = 0.25f);
 	//void disableFftSmoothing();
 
-	float smooth(float newData, float oldData, float newDataWeight);
+	static float smooth(float newData, float oldData, float newDataWeight);
 };

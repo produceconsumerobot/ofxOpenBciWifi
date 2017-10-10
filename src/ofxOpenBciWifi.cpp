@@ -17,7 +17,12 @@ ofxOpenBciWifi::ofxOpenBciWifi(int samplingFreq)
 	TCP.setMessageDelimiter(_messageDelimiter);
 	TCP.setup(_tcpPort);
 
-	_verboseOutput = true;
+	_verboseOutput = false;
+	if (_verboseOutput)
+	{
+		ofSetLogLevel(OF_LOG_VERBOSE);
+	}
+
 	_loggingEnabled = false;
 	_nHeadsets = 0;
 
@@ -28,7 +33,6 @@ ofxOpenBciWifi::ofxOpenBciWifi(int samplingFreq)
 	_fftBuffersize = _fftWindowSize * 2;
 
 	_fft = ofxFft::create(_fftWindowSize, OF_FFT_WINDOW_HAMMING);
-	//int nBins = _fft->getBinFromFrequency(70, _Fs);
 
 	_hpFiltEnabled = true;
 	_hpFiltFreq = 1.f;
@@ -36,8 +40,9 @@ ofxOpenBciWifi::ofxOpenBciWifi(int samplingFreq)
 	_notchFiltFreq = 60.f;
 	_lpFiltEnabled = false;
 	_lpFiltFreq = 50.f;
+
 	_fftSmoothingEnabled = true;
-	_fftSmoothingNwin = 7;
+	//_fftSmoothingNwin = 7;
 	_fftSmoothingNewDataWeight = 0.25f;
 }
 
@@ -65,11 +70,11 @@ vector<string> ofxOpenBciWifi::getHeadsetIpAddresses()
 
 void ofxOpenBciWifi::enableDataLogging(string filePath)
 {
-	_logFileName = filePath;
 	_logger.setDirPath("");
 	_logger.setFilename(filePath);
-	_loggingEnabled = true;
 	_logger.startThread();
+	_logger.push("ip,timestamps,sample_numbers,count,data0,...,dataN\n");
+	_loggingEnabled = true;
 }
 
 void ofxOpenBciWifi::disableDataLogging()
@@ -156,6 +161,9 @@ void ofxOpenBciWifi::update()
 							_filterNotch.at(h).resize(_nChannels.at(h));
 							_filterLP.at(h).resize(_nChannels.at(h));
 
+							sample_numbers.at(h).resize(2);
+							sample_numbers.at(h).at(0) = 255;
+							sample_numbers.at(h).at(1) = 255;
 							for (int ch = 0; ch < _nChannels.at(h); ch++)
 							{
 								_fftBuffer.at(h).at(ch).resize(_fftBuffersize);
@@ -191,6 +199,13 @@ void ofxOpenBciWifi::update()
 							_logger.push(_ipAddresses.at(h) + ",");
 							_logger.push(json["chunk"][s]["timestamp"].asString() + ",");
 							_logger.push(json["chunk"][s]["sampleNumber"].asString() + ",");
+							sample_numbers.at(h).at(0) = sample_numbers.at(h).at(1);
+							sample_numbers.at(h).at(1) = json["chunk"][s]["sampleNumber"].asInt();
+							if ((sample_numbers.at(h).at(1) - sample_numbers.at(h).at(0)) >= 2)
+							{
+								bool debug = true;
+							}
+							_logger.push(json["count"].asString() + ",");
 						}
 						catch (exception e) {}
 					}
@@ -201,6 +216,7 @@ void ofxOpenBciWifi::update()
 						try {
 							_data.at(h).at(ch).at(wp) = json["chunk"][s]["data"][ch].asFloat();
 
+							// Filter data
 							if (_hpFiltEnabled)
 							{
 								_data.at(h).at(ch).at(wp) = _filterHP.at(h).at(ch).update(_data.at(h).at(ch).at(wp));
@@ -214,6 +230,7 @@ void ofxOpenBciWifi::update()
 								_data.at(h).at(ch).at(wp) = _filterLP.at(h).at(ch).update(_data.at(h).at(ch).at(wp));
 							}
 
+							// Log data
 							if (_loggingEnabled)
 							{
 								_logger.push(ofToString(_data.at(h).at(ch).at(wp)) + ",");
@@ -234,7 +251,7 @@ void ofxOpenBciWifi::update()
 						_logger.push("\n");
 					}
 
-					if (_fftEnabled)
+					if (_fftEnabled && _nChannels.at(h))
 					{
 						_fftWritePos.at(h)++;
 						//if (_fftWritePos >= _fftReadPos + _fftWindowSize)
@@ -243,13 +260,8 @@ void ofxOpenBciWifi::update()
 							for (int ch = 0; ch < _nChannels.at(h); ch++)
 							{
 								// If the buffer is full, perform FFT
-								vector<float> temp;
-								temp.resize(_fftWindowSize);
-								for (int n = 0; n < _fftWindowSize; n++)
-								{
-									temp.at(n) = _fftBuffer.at(h).at(ch).at(n + _fftReadPos.at(h));
-								}
-								_fft->setSignal(temp);
+								_fft->setSignal(&_fftBuffer.at(h).at(ch).at(_fftReadPos.at(h)));
+
 								float* curFft = _fft->getAmplitude();
 
 								for (int n = 0; n < _fftWindowSize / 2; n++)
@@ -286,22 +298,16 @@ void ofxOpenBciWifi::update()
 								for (int ch = 0; ch < _nChannels.at(h); ch++)
 								{
 									// FFT buffer is running out. Shift back to the beginning.
-									vector<float> temp;
-									temp.resize(_fftWindowSize - _fftOverlap);
-									for (int n = 0; n < _fftWindowSize - _fftOverlap; n++)
-									{
-										temp.at(n) = _fftBuffer.at(h).at(ch).at(n + _fftReadPos.at(h) + _fftWindowSize - _fftOverlap);
-									}
-									for (int n = 0; n < _fftWindowSize - _fftOverlap; n++)
-									{
-										_fftBuffer.at(h).at(ch).at(n) = temp.at(n);
-									}
-									//copy(_fftBuffer.at(h).at(ch).begin() + _fftReadPos + _fftWindowSize - _fftOverlap,
-									//	_fftBuffer.at(h).at(ch).begin() + _fftReadPos + _fftWindowSize - 1,
-									//	_fftBuffer.at(h).at(ch).begin());
+									// Test Code
+									//_fftBuffer.at(h).at(ch).at(_fftReadPos.at(h) + _fftWindowSize - _fftOverlap) = 1000000000;
+									//_fftBuffer.at(h).at(ch).at(_fftReadPos.at(h) + _fftWindowSize - 1) = 1000000000;
+									copy(_fftBuffer.at(h).at(ch).begin() + _fftReadPos.at(h) + _fftWindowSize - _fftOverlap,
+										_fftBuffer.at(h).at(ch).begin() + _fftReadPos.at(h) + _fftWindowSize,
+										_fftBuffer.at(h).at(ch).begin());
 								}
 								_fftReadPos.at(h) = 0;
 								_fftWritePos.at(h) = _fftReadPos.at(h) + _fftWindowSize - _fftOverlap;
+
 							}
 
 							_newFftReady.at(h) = true;
@@ -333,6 +339,10 @@ void ofxOpenBciWifi::addHeadset(string ipAddress)
 	_newFftReady.push_back(false);
 	_fftReadPos.push_back(0);
 	_fftWritePos.push_back(0);
+
+	sample_numbers.resize(sz);
+
+	ofLogNotice("ofxOpenBciWifi") << "Headset #" << sz << " detected: " << ipAddress;
 }
 
 vector<string> ofxOpenBciWifi::getStringData()
@@ -386,7 +396,6 @@ void ofxOpenBciWifi::clearDataVectors()
 		for (int ch = 0; ch < _data.at(h).size(); ch++)
 		{
 			_data.at(h).at(ch).clear();			// Headsets x Channels x Sample
-			//_latestFft.at(h).at(ch).clear();		// Headsets x Channels x Frequency
 		}
 		_newFftReady.at(h) = false;
 	}
