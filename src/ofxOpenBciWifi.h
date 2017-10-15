@@ -16,7 +16,7 @@
 #include "ofxFft.h"
 #include "ofxThreadedLogger.h"
 
-class ofxOpenBciWifi
+class ofxOpenBciWifi : public ofThread
 {
 private:
 	ofxTCPServer TCP;
@@ -25,11 +25,18 @@ private:
 	int _nHeadsets;
 	string _messageDelimiter;						
 	vector<string> _ipAddresses;
-	vector<string> _stringData;
+	int _stringBufferLen;							// Length of string buffer for incoming data 
+	//vector<string> _stringData1;
+	//vector<string> _stringData2;
+	vector<string> _stringDataWrite;
+	vector<string> _stringDataRead;
 	vector<int> _nChannels;
 	vector<vector<vector<float>>> _data;			// Headsets x Channels x Sample
 	vector<vector<vector<float>>> _fftBuffer;		// Headsets x Channels x Sample
 	vector<vector<vector<float>>> _latestFft;		// Headsets x Channels x Frequency
+
+	uint64_t _lastLoopTime;
+	vector<unsigned int> _loopTimes;
 	
 	ofxFft* _fft;
 	int _fftWindowSize;					// Number of samples used to calculate fft. Default = Fs.
@@ -63,13 +70,17 @@ private:
 
 	ofxJSONElement json;
 
+	void threadedFunction();
 	void addHeadset(string ipAddress);
 	void clearDataVectors();
+	void swapStringData();
+	void readIncomingData();
 
 	vector<vector<int>> sample_numbers;
 
 public:
 	ofxOpenBciWifi(int samplingFreq = 250);
+	~ofxOpenBciWifi();
 	void setTcpPort(int port);
 	int getTcpPort();
 	int getHeadsetCount();

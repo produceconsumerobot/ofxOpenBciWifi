@@ -32,6 +32,10 @@ ofxOpenBciWifi::ofxOpenBciWifi(int samplingFreq)
 	_fftOverlap = _fftWindowSize / 2;
 	_fftBuffersize = _fftWindowSize * 2;
 
+	_stringBufferLen = 200 * _Fs * 30; // charPerSample x Fs x Seconds
+	//_stringDataWrite = &_stringData1;
+	//_stringDataRead = &_stringData2;
+
 	_fft = ofxFft::create(_fftWindowSize, OF_FFT_WINDOW_HAMMING);
 
 	_hpFiltEnabled = true;
@@ -44,13 +48,23 @@ ofxOpenBciWifi::ofxOpenBciWifi(int samplingFreq)
 	_fftSmoothingEnabled = true;
 	//_fftSmoothingNwin = 7;
 	_fftSmoothingNewDataWeight = 0.25f;
+
+	_lastLoopTime = ofGetElapsedTimeMicros();
+
+	startThread();
+}
+
+ofxOpenBciWifi::~ofxOpenBciWifi() {
+	waitForThread(true);
 }
 
 void ofxOpenBciWifi::setTcpPort(int port)
 {
 	// ToDo: add error checking
 	_tcpPort = port;
+	lock();
 	TCP.setup(_tcpPort);
+	unlock();
 }
 
 int ofxOpenBciWifi::getTcpPort()
@@ -83,15 +97,38 @@ void ofxOpenBciWifi::disableDataLogging()
 	_logger.stopThread();
 }
 
-void ofxOpenBciWifi::update()
+void ofxOpenBciWifi::swapStringData()
 {
-	clearDataVectors();
 
-	for (unsigned int i = 0; i < (unsigned int)TCP.getLastID(); i++) 
+}
+
+void ofxOpenBciWifi::threadedFunction()
+{
+	while (isThreadRunning()) {
+		lock();
+		for (int h = 0; h < _nHeadsets; h++) {
+			if (_stringDataWrite.at(h).size() > _stringBufferLen)
+			{
+				// Clear string data before it blows up your RAM
+				_stringDataWrite.at(h).clear();
+			}
+		}
+
+		readIncomingData();
+		unlock();
+		//_loopTimes.push_back(ofGetElapsedTimeMicros() - _lastLoopTime);
+		//_lastLoopTime = ofGetElapsedTimeMicros();
+		sleep(1);
+	}
+}
+
+void ofxOpenBciWifi::readIncomingData()
+{
+	for (unsigned int i = 0; i < (unsigned int)TCP.getLastID(); i++)
 	{
 		int h = -1;		// Headset number
 		if (!TCP.isClientConnected(i))continue;
-
+		
 		// get the ip and port of the client
 		string port = ofToString(TCP.getClientPort(i));
 		string ip = TCP.getClientIP(i);
@@ -114,17 +151,43 @@ void ofxOpenBciWifi::update()
 		// receive all the available messages, separated by _messageDelimiter
 		string tmp;
 		do {
-			_stringData.at(h) = _stringData.at(h) + tmp;
+			_stringDataWrite.at(h) = _stringDataWrite.at(h) + tmp;
 			tmp = TCP.receive(i);
 		} while (tmp != "");
+	}
+}
 
+void ofxOpenBciWifi::update()
+{
+	clearDataVectors();
+
+	lock();
+	for (unsigned int h = 0; h < _nHeadsets; h++)
+	{
+		_stringDataRead.at(h) = _stringDataWrite.at(h);
+		_stringDataWrite.at(h).clear();
+	}
+	unlock();
+
+	//return;
+
+	for (unsigned int h = 0; h < _nHeadsets; h++)
+	{
+		if (_stringDataRead.at(h).size() == 0)
+		{
+			continue;
+		}
+		else
+		{
+			cout << "_stringDataRead.at(h).size() = " << _stringDataRead.at(h).size() << endl;
+		}
 		if (_verboseOutput)
 		{
-			ofLogVerbose("ofxOpenBciWifi") << _stringData.at(h);
+			ofLogVerbose("ofxOpenBciWifi") << _stringDataRead.at(h);
 		}
 
 		// Split the string by "chunk"
-		vector<string> result = ofSplitString(_stringData.at(h), "{\"chunk\":");
+		vector<string> result = ofSplitString(_stringDataRead.at(h), "{\"chunk\":");
 		for (int r = 1; r < result.size(); r++)
 		{
 			// Add back "chunk"
@@ -332,7 +395,8 @@ void ofxOpenBciWifi::addHeadset(string ipAddress)
 {
 	_ipAddresses.push_back(ipAddress);
 	int sz = _ipAddresses.size();
-	_stringData.resize(sz);
+	_stringDataRead.resize(sz);
+	_stringDataWrite.resize(sz);
 	_data.resize(sz);
 	_filterHP.resize(sz);
 	_filterNotch.resize(sz);
@@ -343,6 +407,7 @@ void ofxOpenBciWifi::addHeadset(string ipAddress)
 	_newFftReady.push_back(false);
 	_fftReadPos.push_back(0);
 	_fftWritePos.push_back(0);
+	_nHeadsets = sz;
 
 	sample_numbers.resize(sz);
 
@@ -351,7 +416,7 @@ void ofxOpenBciWifi::addHeadset(string ipAddress)
 
 vector<string> ofxOpenBciWifi::getStringData()
 {
-	return _stringData;
+	return _stringDataRead;
 }
 
 string ofxOpenBciWifi::getStringData(string ipAddress)
@@ -360,7 +425,7 @@ string ofxOpenBciWifi::getStringData(string ipAddress)
 	{
 		if (ipAddress.compare(_ipAddresses.at(h)) == 0)
 		{
-			return _stringData.at(h);
+			return _stringDataRead.at(h);
 		}
 	}
 }
@@ -396,7 +461,7 @@ void ofxOpenBciWifi::clearDataVectors()
 {
 	for (int h = 0; h < _data.size(); h++)
 	{
-		_stringData.at(h).clear();
+		//_stringDataRead.at(h).clear();
 		for (int ch = 0; ch < _data.at(h).size(); ch++)
 		{
 			_data.at(h).at(ch).clear();			// Headsets x Channels x Sample
