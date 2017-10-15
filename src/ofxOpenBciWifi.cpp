@@ -130,7 +130,11 @@ void ofxOpenBciWifi::update()
 			// Add back "chunk"
 			result.at(r) = "{\"chunk\":" + result.at(r);
 			bool success = json.parse(result.at(r));
-			if (success)
+			if (!success)
+			{
+				bool debugStop = true;
+			}
+			else
 			{
 				int nSamples = 0;
 				try {
