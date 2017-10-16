@@ -33,8 +33,6 @@ ofxOpenBciWifi::ofxOpenBciWifi(int samplingFreq)
 	_fftBuffersize = _fftWindowSize * 2;
 
 	_stringBufferLen = 200 * _Fs * 30; // charPerSample x Fs x Seconds
-	//_stringDataWrite = &_stringData1;
-	//_stringDataRead = &_stringData2;
 
 	_fft = ofxFft::create(_fftWindowSize, OF_FFT_WINDOW_HAMMING);
 
@@ -116,6 +114,7 @@ void ofxOpenBciWifi::threadedFunction()
 
 		readIncomingData();
 		unlock();
+		// Debug timing code
 		//_loopTimes.push_back(ofGetElapsedTimeMicros() - _lastLoopTime);
 		//_lastLoopTime = ofGetElapsedTimeMicros();
 		sleep(1);
@@ -169,18 +168,13 @@ void ofxOpenBciWifi::update()
 	}
 	unlock();
 
-	//return;
-
 	for (unsigned int h = 0; h < _nHeadsets; h++)
 	{
 		if (_stringDataRead.at(h).size() == 0)
 		{
 			continue;
 		}
-		else
-		{
-			cout << "_stringDataRead.at(h).size() = " << _stringDataRead.at(h).size() << endl;
-		}
+
 		if (_verboseOutput)
 		{
 			ofLogVerbose("ofxOpenBciWifi") << _stringDataRead.at(h);
@@ -479,4 +473,71 @@ bool ofxOpenBciWifi::isFftNew(string ipAddress)
 			return _newFftReady.at(h);
 		}
 	}
+}
+
+void ofxOpenBciWifi::enableFft()
+{
+	_fftEnabled = true;
+}
+
+void ofxOpenBciWifi::disableFft()
+{
+	_fftEnabled = false;
+}
+
+void ofxOpenBciWifi::enableHPFilter(float freq)
+{
+	_hpFiltFreq = freq;
+	for (int h = 0; h < _ipAddresses.size(); h++)
+	{
+		for (int ch = 0; ch < _nChannels.at(h); ch++)
+		{
+			// This will reset the filters
+			_filterHP.at(h).at(ch) = ofxBiquadFilter1f(OFX_BIQUAD_TYPE_HIGHPASS, _hpFiltFreq / _Fs, 0.7071);
+		}
+	}
+	_hpFiltEnabled = true;
+}
+
+void ofxOpenBciWifi::disableHPFilter()
+{
+	_hpFiltEnabled = false;
+}
+
+void ofxOpenBciWifi::enableLPFilter(float freq)
+{
+	_lpFiltFreq = freq;
+	for (int h = 0; h < _ipAddresses.size(); h++)
+	{
+		for (int ch = 0; ch < _nChannels.at(h); ch++)
+		{
+			// This will reset the filters
+			_filterLP.at(h).at(ch) = ofxBiquadFilter1f(OFX_BIQUAD_TYPE_LOWPASS, _lpFiltFreq / _Fs, 0.7071);
+		}
+	}
+	_lpFiltEnabled = true;
+}
+
+void ofxOpenBciWifi::disableLPFilter()
+{
+	_lpFiltEnabled = false;
+}
+
+void ofxOpenBciWifi::enableNotchFilter(float freq)
+{
+	_notchFiltFreq = freq;
+	for (int h = 0; h < _ipAddresses.size(); h++)
+	{
+		for (int ch = 0; ch < _nChannels.at(h); ch++)
+		{
+			// This will reset the filters
+			_filterNotch.at(h).at(ch) = ofxBiquadFilter1f(OFX_BIQUAD_TYPE_NOTCH, _notchFiltFreq / _Fs, 0.7071);
+		}
+	}
+	_notchFiltEnabled = true;
+}
+
+void ofxOpenBciWifi::disableNotchFilter()
+{
+	_notchFiltEnabled = true;
 }

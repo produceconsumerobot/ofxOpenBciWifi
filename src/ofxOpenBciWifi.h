@@ -26,8 +26,6 @@ private:
 	string _messageDelimiter;						
 	vector<string> _ipAddresses;
 	int _stringBufferLen;							// Length of string buffer for incoming data 
-	//vector<string> _stringData1;
-	//vector<string> _stringData2;
 	vector<string> _stringDataWrite;
 	vector<string> _stringDataRead;
 	vector<int> _nChannels;
@@ -95,13 +93,15 @@ public:
 	int getFftBinFromFrequency(float freq);
 	bool isFftNew(string ipAddress);
 
+	void enableHPFilter(float freq);
+	void disableHPFilter();
+	void enableLPFilter(float freq);
+	void disableLPFilter();
+	void enableNotchFilter(float freq);
+	void disableNotchFilter();
+	void enableFft();
+	void disableFft();
 	// ** Planned functions **
-	//void enableHPFilter(float freq);
-	//void disableHPFilter();
-	//void enableLPFilter(float freq);
-	//void disableLPFilter();
-	//void enableNotchFilter(float freq);
-	//void disableNotchFilter();
 	//void enableFftSmoothing(float newDataWeight = 0.25f);
 	//void disableFftSmoothing();
 
