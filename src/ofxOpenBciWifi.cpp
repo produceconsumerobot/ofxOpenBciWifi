@@ -153,6 +153,7 @@ void ofxOpenBciWifi::readIncomingData()
 			_stringDataWrite.at(h) = _stringDataWrite.at(h) + tmp;
 			tmp = TCP.receive(i);
 		} while (tmp != "");
+		bool debugTest = true;
 	}
 }
 
